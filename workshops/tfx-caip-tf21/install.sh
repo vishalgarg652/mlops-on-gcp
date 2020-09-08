@@ -17,7 +17,7 @@
 
 cat > requirements.txt << EOF
 pandas<1.0.0
-tfx==0.21.4
+tfx==0.23.0
 kfp==0.5.1
 EOF
 

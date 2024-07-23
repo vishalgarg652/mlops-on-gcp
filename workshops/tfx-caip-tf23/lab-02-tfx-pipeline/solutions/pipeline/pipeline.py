@@ -101,26 +101,27 @@ def create_pipeline(pipeline_name: Text,
 
  
   # Brings data into the pipeline and splits the data into training and eval splits
-  output_config = example_gen_pb2.Output(
+  output = example_gen_pb2.Output(
     split_config=example_gen_pb2.SplitConfig(splits=[
         example_gen_pb2.SplitConfig.Split(name='train', hash_buckets=4),
         example_gen_pb2.SplitConfig.Split(name='eval', hash_buckets=1)
     ]))
 
-  examplegen = CsvExampleGen(input_base=data_root_uri)
+  examplegen = CsvExampleGen(input_base=data_root_uri, 
+                             output_config=output)
 
   # Computes statistics over data for visualization and example validation.
   statisticsgen = StatisticsGen(examples=examplegen.outputs.examples)
+
+  # Generates schema based on statistics files. Even though, we use user-provided schema
+  # we still want to generate the schema of the newest data for tracking and comparison
+  schemagen = SchemaGen(statistics=statisticsgen.outputs.statistics)
 
   # Import a user-provided schema
   import_schema = ImporterNode(
       instance_name='import_user_schema',
       source_uri=SCHEMA_FOLDER,
       artifact_type=Schema)
-  
-  # Generates schema based on statistics files. Even though, we use user-provided schema
-  # we still want to generate the schema of the newest data for tracking and comparison
-  schemagen = SchemaGen(statistics=statisticsgen.outputs.statistics)
 
   # Performs anomaly detection based on statistics and data schema.
   examplevalidator = ExampleValidator(
@@ -242,10 +243,10 @@ def create_pipeline(pipeline_name: Text,
 
   components=[
       examplegen, 
-      statisticsgen, 
-      import_schema, 
-      schemagen, 
-      examplegen, 
+      statisticsgen,
+      schemagen,      
+      import_schema,
+      examplevalidator,
       transform,
       trainer, 
       resolver, 
